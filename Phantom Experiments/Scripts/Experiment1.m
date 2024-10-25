@@ -4,8 +4,9 @@
 
 
 % Define necessary folders
-ImageDatafolder = char("C:\Users\adam\OneDrive - University College London\UCL PhD\PhD Year 1\Projects\Noise Statistics Project\Code\Noise-Statistics-Project\New\Phantom Experiments\Imaging Data");
-imagefolder = [ImageDatafolder '/Denoised'];
+ImageDatafolder = char("C:\Users\adam\OneDrive - University College London\UCL PhD\PhD Year 1\Projects\Noise Statistics Project\Code\DWI-Noise-Project\Phantom Experiments\Imaging Data");
+imgtype = 'MAT DN';
+imagefolder = [ImageDatafolder '/' imgtype];
 ROIfolder = [ImageDatafolder '/ROIs'];
 
 % Load image and ROI details
@@ -22,21 +23,21 @@ ImageNames = {
     'b2750_Ex1',...
     'b3000_Ex1',...
     'b3500_Ex1',...
-    'b4000_Ex1'...
+    % 'b4000_Ex1'...
     };
 
 Nimg = length(ImageNames);
 
 % Define ROI names to use
 ROINames = {
-    "ROI1",...
+    ..."ROI1",...
     "ROI2",...
     "ROI3",...
     "ROI4",...
     "ROI5",...
     "ROI6",...
     "ROI7",...
-    "ROI8"
+    ..."ROI8"
     };
 
 NROI = length(ROINames);
@@ -216,10 +217,9 @@ end
 
 %% Plot results
 
-figfolder = "C:\Users\adam\OneDrive - University College London\UCL PhD\PhD Year 1\Projects\Noise Statistics Project\Code\Noise-Statistics-Project\New\Phantom Experiments\Figures";
 
 colordict = dictionary([1,2,3,4,5,6,7,8], [	"#0072BD", 	"#D95319",	"#EDB120", 	"#7E2F8E", "#77AC30", "#4DBEEE", "#A2142F", "#e981cd"]);
-concentrations = ["50% PVP", "40% PVP", "30% PVP", "20% PVP", "10% PVP", "5% PVP", "2.5% PVP", "1mM NiCl_2"];
+concentrations = dictionary(["ROI1","ROI2","ROI3","ROI4","ROI5","ROI6","ROI7","ROI8"], ["50%", "40%", "30%", "20%", "10%", "5%", "2.5%", "1mM"] );
 
 
 % == Figure 1: sigma0 estimation
@@ -242,14 +242,15 @@ for ROIindx = 1:NROI
 
     % Extract sigma0 measurements
     sigma0s(ROIindx, :) = [FittingResults(ROIbools).sigma0fit];
-    scatter(ROIindx*ones(Nimg, 1), sigma0s(ROIindx, :), '*', MarkerEdgeColor = colordict(ROIindx), DisplayName = concentrations(ROIindx)) 
+    scatter(ROIindx*ones(Nimg, 1), sigma0s(ROIindx, :), '*', MarkerEdgeColor = colordict(ROIindx), DisplayName = concentrations(ROIName)) 
     hold on
 
 end
 
 boxplot(transpose(sigma0s))
 xticks(linspace(1,NROI,NROI))
-xticklabels(ROINames)
+xticklabels(concentrations(ROINames))
+xlabel('PVP concentration')
 ylabel('Estimated \sigma_0')
 % xlabel('Concentration')
 ylim([0, 0.25]);%opts.sigma0max])
@@ -258,7 +259,7 @@ title(noisetype)
 legend;
 ax = gca();
 ax.FontSize = 12;
-saveas(fig1, [char(figfolder) '/sigma0 (' noisetype ').fig'])
+% saveas(fig1, [char(figfolder) '/sigma0 (' noisetype ').fig'])
 
 
 % === Figure 2: T2 estimation
@@ -280,7 +281,7 @@ for ROIindx = 1:NROI
 
     trueT2 = T2;
     T2s(ROIindx, : ) = ([FittingResults(ROIbools).T2fit]);
-    scatter(ROIindx*ones(Nimg, 1), T2s(ROIindx, :), '*', MarkerEdgeColor = colordict(ROIindx), DisplayName = concentrations(ROIindx)) 
+    scatter(ROIindx*ones(Nimg, 1), T2s(ROIindx, :), '*', MarkerEdgeColor = colordict(ROIindx), DisplayName = concentrations(ROIName)) 
     hold on
     scatter([ROIindx+0.4], [trueT2], MarkerEdgeColor = 'black', MarkerFaceColor='black', Marker = 'o', HandleVisibility = 'off')
 
@@ -288,7 +289,8 @@ end
 
 boxplot(transpose(T2s))
 xticks(linspace(1,NROI,NROI))
-xticklabels(ROINames)
+xticklabels(concentrations(ROINames))
+xlabel('PVP concentration')
 ylabel('Estimated T2')
 % xlabel('Concentration')
 ylim([0,1000])
@@ -297,7 +299,7 @@ title(noisetype)
 % legend;
 ax = gca();
 ax.FontSize = 12;
-saveas(fig2, [char(figfolder) '/T2 (' noisetype ').fig'])
+% saveas(fig2, [char(figfolder) '/T2 (' noisetype ').fig'])
 
 
 % === Figure 3: D estimation
@@ -319,7 +321,7 @@ for ROIindx = 1:NROI
 
     trueD = D;
     Ds(ROIindx, : ) = ([FittingResults(ROIbools).Dfit]);
-    scatter(ROIindx*ones(Nimg, 1), Ds(ROIindx, :), '*', MarkerEdgeColor = colordict(ROIindx), DisplayName = concentrations(ROIindx)) 
+    scatter(ROIindx*ones(Nimg, 1), Ds(ROIindx, :), '*', MarkerEdgeColor = colordict(ROIindx), DisplayName = concentrations(ROIName)) 
     hold on
     scatter([ROIindx+0.4], [trueD], MarkerEdgeColor = 'black', MarkerFaceColor='black', Marker = 'o', HandleVisibility = 'off')
 
@@ -327,7 +329,8 @@ end
 
 boxplot(transpose(Ds))
 xticks(linspace(1,NROI,NROI))
-xticklabels(ROINames)
+xticklabels(concentrations(ROINames))
+xlabel('PVP concentration')
 ylabel('Estimated D')
 % xlabel('Concentration')
 ylim([0,1.2e-3])
@@ -336,4 +339,33 @@ title(noisetype)
 % legend;
 ax = gca();
 ax.FontSize = 12;
+% saveas(fig3, [char(figfolder) '/D (' noisetype ').fig'])
+
+
+
+%% Save figures and fitting results
+
+outputfolder = char("C:\Users\adam\OneDrive - University College London\UCL PhD\PhD Year 1\Projects\Noise Statistics Project\Code\DWI-Noise-Project\Phantom Experiments\Outputs");
+dt = char(datetime());
+dt = strrep(dt, ':', '-');
+outf = [outputfolder '/' dt];
+figfolder = [outf '/figures'];
+mkdir(figfolder);
+
+
+% Meta information
+Meta = struct();
+Meta.imagefolder = imgtype;
+Meta.ImageNames = ImageNames;
+Meta.ROINames = ROINames;
+Meta.NoiseType = noisetype;
+
+save([outf '/Meta.mat'], "Meta");
+save([outf '/FittingResults.mat'], "FittingResults");
+
+% Save figures
+saveas(fig1, [char(figfolder) '/sigma0 (' noisetype ').fig'])
+saveas(fig2, [char(figfolder) '/T2 (' noisetype ').fig'])
 saveas(fig3, [char(figfolder) '/D (' noisetype ').fig'])
+
+clear;

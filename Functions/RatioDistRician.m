@@ -17,17 +17,16 @@ arguments
 
 
     % Range/Resolution of output pdf
-    opts.zs
+    opts.zs 
     opts.zmin = 0
-    opts.zmax = 1.5
+    opts.zmax = 1
     opts.dz = 0.005
 
     % Range/Resolution of integral
     opts.ys
     opts.ymin = 0 
-    opts.ymax = 1.5
-    opts.dy = 0.005 % Made larger for speed
-
+    opts.ymax = 1
+    opts.dy = 0.005 
 
     % Calibration
     opts.calibrationfolder = "C:\Users\adam\OneDrive - University College London\UCL PhD\PhD Year 1\Projects\Noise Statistics Project\Code\Noise-Statistics-Project\New\Core Functions\Noise\Calibration Curves"
@@ -38,7 +37,7 @@ end
 % == Construct array of zs
 
 if ~isfield(opts,'zs')
-    zs = linspace(opts.zmin, opts.zmax, ceil( (opts.zmax-opts.zmin)/opts.dz) );
+    zs = linspace(opts.zmin, opts.zmax, ceil( (opts.zmax-opts.zmin)/opts.dz) +1);
 else
     zs = opts.zs;
 end
@@ -46,13 +45,10 @@ end
 % == Construct array of ys (to integrate over at each z)
 
 if ~isfield(opts,'ys')
-    ys = linspace(opts.ymin, opts.ymax, ceil( (opts.ymax-opts.ymin)/opts.dy) );
+    ys = linspace(opts.ymin, opts.ymax, ceil( (opts.ymax-opts.ymin)/opts.dy)+1);
 else
     ys = opts.ys;
 end
-
-ys = linspace(opts.ymin, opts.ymax, ceil( (opts.ymax-opts.ymin)/opts.dy) );
-
 
 
 %% == Construct first Rice distribution (b=0)

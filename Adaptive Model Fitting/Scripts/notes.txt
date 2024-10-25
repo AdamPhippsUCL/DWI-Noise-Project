@@ -1,0 +1,10 @@
+Adaptive model fitting simulation experiment
+
+Fitting with:
+
+- AMICO on raw
+- AMICO on DN
+- MLP on raw (trained with generic Rice distribution)
+- MLP on raw (trained with ratio distribution)
+- MLP on DN (trained on ratio distribution with reduced sigma0)
+

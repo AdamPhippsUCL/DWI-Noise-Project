@@ -1,9 +1,9 @@
 % Script to apply MP-PCA denoising 
 
 % Folder path for MAT files
-MATfolder = char("C:\Users\adam\OneDrive - University College London\UCL PhD\PhD Year 1\Projects\Noise Statistics Project\Code\Noise-Statistics-Project\New\Phantom Experiments\Imaging Data\MAT");
+MATfolder = char("C:\Users\adam\OneDrive - University College London\UCL PhD\PhD Year 1\Projects\Noise Statistics Project\Code\DWI-Noise-Project\Phantom Experiments\Imaging Data\MAT");
 
-Denoisedfolder = char("C:\Users\adam\OneDrive - University College London\UCL PhD\PhD Year 1\Projects\Noise Statistics Project\Code\Noise-Statistics-Project\New\Phantom Experiments\Imaging Data\Denoised");
+Denoisedfolder = char("C:\Users\adam\OneDrive - University College London\UCL PhD\PhD Year 1\Projects\Noise Statistics Project\Code\DWI-Noise-Project\Phantom Experiments\Imaging Data\MAT DN");
 
 % Read contents
 contents = dir(MATfolder);
@@ -38,7 +38,7 @@ for findx = 1:length(foldernames)
         slice = squeeze(img(:,:,slindx,:) );
 
         % Apply denoising
-        sliceDN = denoise(slice, window);
+        [sliceDN, S2, P] = denoise(slice, window);
 
         imgDN(:,:,slindx,:) = sliceDN;
 
