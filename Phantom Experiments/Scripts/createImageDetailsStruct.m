@@ -161,5 +161,5 @@ ImageDetails.Rav = Ravs;
 
 
 % Save structure as mat file
-folder = "C:\Users\adam\OneDrive - University College London\UCL PhD\PhD Year 1\Projects\Noise Statistics Project\Code\Noise-Statistics-Project\New\Phantom Experiments\Imaging Data";
+folder = "C:\Users\adam\OneDrive - University College London\UCL PhD\PhD Year 1\Projects\Noise Statistics Project\Code\DWI-Noise-Project\Phantom Experiments\Imaging Data";
 save([char(folder) '/ImageDetails.mat' ], 'ImageDetails')

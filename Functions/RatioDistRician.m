@@ -29,7 +29,7 @@ arguments
     opts.dy = 0.005 
 
     % Calibration
-    opts.calibrationfolder = "C:\Users\adam\OneDrive - University College London\UCL PhD\PhD Year 1\Projects\Noise Statistics Project\Code\Noise-Statistics-Project\New\Core Functions\Noise\Calibration Curves"
+    opts.calibrationfolder = "C:\Users\adam\OneDrive - University College London\UCL PhD\PhD\Projects\DWI Noise Project\Code\DWI-Noise-Project\Functions\Calibration Curves"
 
 end
 

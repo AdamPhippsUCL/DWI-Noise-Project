@@ -78,7 +78,7 @@ switch opts.boundstype
 end
 
 
-options = optimoptions('lsqcurvefit', 'OptimalityTolerance', 1e-12);
+options = optimoptions('lsqcurvefit');%, 'OptimalityTolerance', 1e-12);
 
 
 switch opts.disttype
@@ -119,111 +119,111 @@ end
 
 % Function to fit Ratio distribution
 
-function binfreqs = RatioDist1(b, x)
+% function binfreqs = RatioDist1(b, x)
+% 
+% % Generate ratio distribution given x
+% % Outputs bin frequencies at bin centers predicted
+% % for ratio distribution with sigma0
+% 
+% arguments
+%     b % sigma0 value
+%     x % bin centers
+% end
+% 
+% % Get parameters
+% params = evalin('base', 'current_params');
+% T2 = params.T2;
+% TE = params.TE;
+% fd = params.fd;
+% N0 = params.N0;
+% Nb = params.Nb;
+% sigma0 = b;
+% 
+% % b0 signal
+% b0signal = exp(-TE/T2);
+% 
+% % b signal
+% bsignal = fd*b0signal;
+% 
+% % Bin spacings
+% binmin = min(x);
+% binmax = max(x);
+% binspacing = x(2)-x(1);
+% 
+% 
+% % Generate pdf over bin centers
+% pdfvals = RatioDistRician( ...
+%     b0signal, ...
+%     bsignal, ...
+%     sigma0, ...
+%     N0=N0, ...
+%     Nb=Nb, ...
+%     zmin = binmin, ...
+%     zmax = binmax, ...
+%     dz = binspacing,...
+%     ymin = binmin,...
+%     ymax = binmax,...
+%     dy = binspacing);
+% 
+% % Evaluate bin frequencies
+% binfreqs = pdfvals*binspacing;
+% 
+% binfreqs = reshape(binfreqs, size(x));
+% 
+% end
+% 
+% function binfreqs = RatioDist2(b, x)
 
 % Generate ratio distribution given x
 % Outputs bin frequencies at bin centers predicted
 % for ratio distribution with sigma0
 
-arguments
-    b % sigma0 value
-    x % bin centers
-end
-
-% Get parameters
-params = evalin('base', 'current_params');
-T2 = params.T2;
-TE = params.TE;
-fd = params.fd;
-N0 = params.N0;
-Nb = params.Nb;
-sigma0 = b;
-
-% b0 signal
-b0signal = exp(-TE/T2);
-
-% b signal
-bsignal = fd*b0signal;
-
-% Bin spacings
-binmin = min(x);
-binmax = max(x);
-binspacing = x(2)-x(1);
-
-
-% Generate pdf over bin centers
-pdfvals = RatioDistRician( ...
-    b0signal, ...
-    bsignal, ...
-    sigma0, ...
-    N0=N0, ...
-    Nb=Nb, ...
-    zmin = binmin, ...
-    zmax = binmax, ...
-    dz = binspacing,...
-    ymin = binmin,...
-    ymax = binmax,...
-    dy = binspacing);
-
-% Evaluate bin frequencies
-binfreqs = pdfvals*binspacing;
-
-binfreqs = reshape(binfreqs, size(x));
-
-end
-
-function binfreqs = RatioDist2(b, x)
-
-% Generate ratio distribution given x
-% Outputs bin frequencies at bin centers predicted
-% for ratio distribution with sigma0
-
-arguments
-    b % [sigma0, T2] value
-    x % bin centers
-end
-
-% Get parameters
-params = evalin('base', 'current_params');
-TE = params.TE;
-fd = params.fd;
-N0 = params.N0;
-Nb = params.Nb;
-sigma0 = b(1);
-T2 = b(2);
-
-% b0 signal
-b0signal = exp(-TE/T2);
-
-% b signal
-bsignal = fd*b0signal;
-
-% Bin spacings
-binmin = min(x);
-binmax = max(x);
-binspacing = x(2)-x(1);
-
-% Generate pdf over bin centers
-pdfvals = RatioDistRician( ...
-    b0signal, ...
-    bsignal, ...
-    sigma0, ...
-    N0=N0, ...
-    Nb=Nb, ...
-    zmin = binmin, ...
-    zmax = binmax, ...
-    dz = binspacing,...
-    ymin = binmin,...
-    ymax = binmax,...
-    dy = binspacing);
-
-% Evaluate bin frequencies
-binfreqs = pdfvals*binspacing;
-
-binfreqs = reshape(binfreqs, size(x));
-
-
-end
+% arguments
+%     b % [sigma0, T2] value
+%     x % bin centers
+% end
+% 
+% % Get parameters
+% params = evalin('base', 'current_params');
+% TE = params.TE;
+% fd = params.fd;
+% N0 = params.N0;
+% Nb = params.Nb;
+% sigma0 = b(1);
+% T2 = b(2);
+% 
+% % b0 signal
+% b0signal = exp(-TE/T2);
+% 
+% % b signal
+% bsignal = fd*b0signal;
+% 
+% % Bin spacings
+% binmin = min(x);
+% binmax = max(x);
+% binspacing = x(2)-x(1);
+% 
+% % Generate pdf over bin centers
+% pdfvals = RatioDistRician( ...
+%     b0signal, ...
+%     bsignal, ...
+%     sigma0, ...
+%     N0=N0, ...
+%     Nb=Nb, ...
+%     zmin = binmin, ...
+%     zmax = binmax, ...
+%     dz = binspacing,...
+%     ymin = binmin,...
+%     ymax = binmax,...
+%     dy = binspacing);
+% 
+% % Evaluate bin frequencies
+% binfreqs = pdfvals*binspacing;
+% 
+% binfreqs = reshape(binfreqs, size(x));
+% 
+% 
+% end
 
 function binfreqs = RatioDist3(b, x)
 
@@ -267,7 +267,7 @@ pdfvals = RatioDistRician( ...
     N0=N0, ...
     Nb=Nb, ...
     zs = bincentres,...
-    ys = linspace(0,2,250),...
+    ys = bincentres,...
     ymin = binmin,...
     ymax = binmax,...
     dy = binspacing);
@@ -281,69 +281,69 @@ binfreqs = reshape(binfreqs, size(x));
 end
 
 
-% Function to fit Rice distribution
-
-function binfreqs = RiceDist1(b, x)
-
-% Generate Rice distribution given x
-% Outputs bin frequencies at bin centers predicted
-% for ratio distribution with sigma0
-
-arguments
-    b % sigma0 value
-    x % bin centers
-end
-
-% Get parameters
-params = evalin('base', 'current_params');
-fd = params.fd;
-sigma0 = b;
-
-% Bin spacings
-binmin = min(x);
-binmax = max(x);
-binspacing = x(2)-x(1);
-
-% Generate pdf over bin centers
-pdfvals = RiceDist(1, fd, sigma0, zmin = binmin, zmax = binmax, dz = binspacing);
-
-% Evaluate bin frequencies
-binfreqs = pdfvals*binspacing;
-
-binfreqs = reshape(binfreqs, size(x));
-
-end
-
-function binfreqs = RiceDist2(b, x)
+% % Function to fit Rice distribution
+% 
+% function binfreqs = RiceDist1(b, x)
+% 
+% % Generate Rice distribution given x
+% % Outputs bin frequencies at bin centers predicted
+% % for ratio distribution with sigma0
+% 
+% arguments
+%     b % sigma0 value
+%     x % bin centers
+% end
+% 
+% % Get parameters
+% params = evalin('base', 'current_params');
+% fd = params.fd;
+% sigma0 = b;
+% 
+% % Bin spacings
+% binmin = min(x);
+% binmax = max(x);
+% binspacing = x(2)-x(1);
+% 
+% % Generate pdf over bin centers
+% pdfvals = RiceDist(1, fd, sigma0, zmin = binmin, zmax = binmax, dz = binspacing);
+% 
+% % Evaluate bin frequencies
+% binfreqs = pdfvals*binspacing;
+% 
+% binfreqs = reshape(binfreqs, size(x));
+% 
+% end
+% 
+% function binfreqs = RiceDist2(b, x)
 
 % Generate ratio distribution given x
 % Outputs bin frequencies at bin centers predicted
 % for ratio distribution with sigma0
 
-arguments
-    b % [sigma0, T2] values
-    x % bin centers
-end
-
-% Get parameters
-params = evalin('base', 'current_params');
-fd = params.fd;
-sigma0 = b(1);
-
-% Bin spacings
-binmin = min(x);
-binmax = max(x);
-binspacing = x(2)-x(1);
-
-% Generate pdf over bin centers
-pdfvals = RiceDist(1, fd, sigma0, zmin = binmin, zmax = binmax, dz = binspacing);
-
-% Evaluate bin frequencies
-binfreqs = pdfvals*binspacing;
-
-binfreqs = reshape(binfreqs, size(x));
-
-end
+% arguments
+%     b % [sigma0, T2] values
+%     x % bin centers
+% end
+% 
+% % Get parameters
+% params = evalin('base', 'current_params');
+% fd = params.fd;
+% sigma0 = b(1);
+% 
+% % Bin spacings
+% binmin = min(x);
+% binmax = max(x);
+% binspacing = x(2)-x(1);
+% 
+% % Generate pdf over bin centers
+% pdfvals = RiceDist(1, fd, sigma0, zmin = binmin, zmax = binmax, dz = binspacing);
+% 
+% % Evaluate bin frequencies
+% binfreqs = pdfvals*binspacing;
+% 
+% binfreqs = reshape(binfreqs, size(x));
+% 
+% end
 
 function binfreqs = RiceDist3(b, x)
 

@@ -4,17 +4,17 @@
 configure = 'MATLAB';
 
 % Noise 
-noisetype = 'Ratio';
-sigma0s = [0.01 0.02 0.04];
-T2s = [40 50 60 80];
+noisetype = 'Rice';
+sigma0s = [0.02 0.04 0.06];
+T2s = [10000];
 
 % Specify protocols 
-modeltypes = {'No VASC VERDICT'} ;
-schemenames = {'Short Scheme v3'}; 
+modeltypes = {'Original VERDICT'} ;
+schemenames = {'Original'}; 
 
 pythonfolder = '';
-TrainingDataFolder = char("C:\Users\adam\OneDrive - University College London\UCL PhD\PhD Year 1\Projects\Noise Statistics Project\Code\DWI-Noise-Project\Adaptive Model Fitting\MLP\training data");
-ModelFolder = char("C:\Users\adam\OneDrive - University College London\UCL PhD\PhD Year 1\Projects\Noise Statistics Project\Code\DWI-Noise-Project\Adaptive Model Fitting\MLP\models");;
+TrainingDataFolder = char("C:\Users\adam\OneDrive - University College London\UCL PhD\PhD\Projects\DWI Noise Project\Code\DWI-Noise-Project\Adaptive Model Fitting\MLP\training data");
+ModelFolder = char("C:\Users\adam\OneDrive - University College London\UCL PhD\PhD\Projects\DWI Noise Project\Code\DWI-Noise-Project\Adaptive Model Fitting\MLP\models");
 
 for sigma0 = sigma0s
     for T2 = T2s
@@ -35,4 +35,14 @@ for sigma0 = sigma0s
         end
 
     end
+end
+
+
+for indx = 1:length(modeltypes)
+    
+    modeltype = modeltypes{indx};
+    schemename = schemenames{indx};
+    save([ModelFolder '/' modeltype '/' schemename '/' noisetype '/T2s.mat' ], "T2s");
+    save([ModelFolder '/' modeltype '/' schemename '/' noisetype '/sigma0s.mat' ], "sigma0s");
+
 end

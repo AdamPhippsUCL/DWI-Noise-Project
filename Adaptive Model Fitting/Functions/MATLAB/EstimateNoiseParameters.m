@@ -7,8 +7,15 @@ arguments
     Echo1fname % DICOM fname of first echo image (TE1)
     Echo2fname % DICOM fname of first echo image (TE1)
 
+
+
     % OPTIONS
-    opts.DATE = 'NA'
+    
+    % registration
+    opts.register
+    opts.maskhw
+    opts.b0fromhighb
+
 
     % image info
     opts.multiframe = true
@@ -17,12 +24,14 @@ arguments
     opts.pyscript = "C:\Users\adam\OneDrive - University College London\UCL PhD\Image-Processing\DICOM\Python\normaliseDiffusionImage.py";
 
     % Fitting
-    opts.patchsize = 3
+    opts.patchsize = 5
     opts.disttype = 'DTIRatio'
     opts.nbin = 20;
     opts.mask = [];
+    opts.smoothsigma = 1 %for Gaussian smoothing
 
     % Folder to save mat images in
+    opts.save = false
     opts.OutputFolder = ""
 
 end
@@ -94,56 +103,102 @@ end
 
 %% 2. Save/Load DICOM images as MAT files
 
+RS1 = dinfo1(1).RescaleSlope;
+RI1 = dinfo1(1).RescaleIntercept;
+IMG1 = RS1*double(squeeze(dicomread(Echo1fname))) + RI1;
 
-% I SHOULD REIMPLEMENT THIS IN MATLAB
-Imagefnames = {Echo1fname, Echo2fname};
-for indx = 1:length(Imagefnames)
-    imagefname = Imagefnames{indx};
-    pyrunfile( ...
-        opts.pyscript, ...
-        imagefname = imagefname, ...
-        multiframe = opts.multiframe, ...
-        returnimages = false,...
-        saveimages = true,...
-        datatype = 'mat',...
-        outputfolder =  opts.ImageOutputFolder...
-        );
+RS2 = dinfo1(1).RescaleSlope;
+RI2 = dinfo1(1).RescaleIntercept;
+IMG2 = RS2*double(squeeze(dicomread(Echo2fname))) + RI2;
+
+% Separate images with diffusion direction
+IMG1 = IMG1(:,:,[dinfo1.DiffusionDirectionality]==1);
+IMG2 = IMG2(:,:,[dinfo2.DiffusionDirectionality]==1);
+
+%% Register 'average' images to b0fromhighb
+
+
+if opts.register
+    
+    % == Find average images
+    for direcIndx = 1:Ndirec
+        img1 = IMG1(:,:,[dinfo1(:).DiffGradOrientIdentifier] == direcIndx);
+        img2 = IMG2(:,:,[dinfo2(:).DiffGradOrientIdentifier] == direcIndx);
+    
+        if direcIndx == 1
+            avgIMG1 = img1;
+            avgIMG2 = img2;
+        else
+            avgIMG1=avgIMG1+img1;
+            avgIMG2=avgIMG2+img2;
+        end
+    end
+    
+    % normalise
+    avgIMG1=mat2gray(avgIMG1, [0 double(prctile(avgIMG1(:),98))]);
+    avgIMG2=mat2gray(avgIMG2, [0 double(prctile(avgIMG2(:),98))]);
+    b0fromhighb=mat2gray(opts.b0fromhighb, [0 double(prctile(opts.b0fromhighb(:),98))]);
+    
+    
+    % == Find regitstration transforms between slices
+    
+    [ny, nx, nz] = size(b0fromhighb) ;
+    
+    % % mask
+    % maskhw=opts.maskhw;
+    % maskcentre = [ceil( (ny+1)/2 )  ceil((nx+1)/2) ] ;
+    % maskc = { max(1,maskcentre(1)-maskhw) : min(ny,maskcentre(1)+maskhw) , ...
+    %     max(1,maskcentre(2)-maskhw) : min(nx,maskcentre(2)+maskhw) } ;
+    % reg_slice = ceil(nz+1)/2;
+    
+    
+    % % fixed and moving
+    % fixed = b0fromhighb(maskc{1}, maskc{2}, reg_slice);
+    % moving1 = avgIMG1(maskc{1}, maskc{2}, reg_slice);
+    % moving2 = avgIMG2(maskc{1}, maskc{2}, reg_slice);
+    
+    
+    for sliceIndx=1:nz
+    
+        fixed = b0fromhighb(:,:, sliceIndx);
+        moving1 = avgIMG1(:,:, sliceIndx);
+        moving2 = avgIMG2(:,:, sliceIndx);
+    
+        [optimizer,metric] = imregconfig('monomodal');
+        tform1 = imregtform(moving1,fixed,'translation',optimizer,metric);
+        tform2 = imregtform(moving2,fixed,'translation',optimizer,metric);
+    
+        for direcIndx = 1:Ndirec
+            IMG1(:,:,Ndirec*(sliceIndx-1)+direcIndx) = imwarp(IMG1(:,:,Ndirec*(sliceIndx-1)+direcIndx),tform1,"OutputView",imref2d(size( b0fromhighb(:,:,1) ))) ;
+            IMG2(:,:,Ndirec*(sliceIndx-1)+direcIndx) = imwarp(IMG2(:,:,Ndirec*(sliceIndx-1)+direcIndx),tform2,"OutputView",imref2d(size( b0fromhighb(:,:,1) ))) ;
+        end
+    end
+
 end
 
 
-% == Create stacked normalised image
+%% Create stacked normalised image
+
 for direcIndx1 = 1:Ndirec
         
-    try
-        % Load first echo image
-        img1 = load([char(opts.ImageOutputFolder) '/mat/' char(SeriesDescription1) '/bval' num2str(bval1) '.0_DiffDirec' num2str(direcIndx1) '.0.mat']).img;
-    catch
-        % Load first echo image
-        img1 = load([char(opts.ImageOutputFolder) '/mat/' char(SeriesDescription1) '/bval' num2str(bval1) '.0_DiffDirec' num2str(direcIndx1) '.mat']).img;
-    end
+    img1 = IMG1(:,:,[dinfo1(:).DiffGradOrientIdentifier] == direcIndx1);
     
     for direcIndx2 = 1:Ndirec
 
-        try
-            % Load second echo image
-            img2 = load([char(opts.ImageOutputFolder) '/mat/' char(SeriesDescription2) '/bval' num2str(bval1) '.0_DiffDirec' num2str(direcIndx2) '.0.mat']).img;
-        catch
-            % Load second echo image
-            img2 = load([char(opts.ImageOutputFolder) '/mat/' char(SeriesDescription2) '/bval' num2str(bval1) '.0_DiffDirec' num2str(direcIndx2) '.mat']).img;
-        end
-    
+        img2 = IMG2(:,:,[dinfo2(:).DiffGradOrientIdentifier] == direcIndx2);
+
         % Remove zeros
         img1(img1==0) = eps;
         img2(img2==0) = eps;
     
     
         % Calculate ratio
-        ratioimg = img2./img1;
+        ratioimg = double(img2)./double(img1);
     
     
         % Configure array for ratio image stack
         if and(direcIndx1 == 1, direcIndx2 == 1)
-            RatioImageStack = zeros([size(ratioimg) Ndirec]);
+            RatioImageStack = zeros([size(ratioimg) Ndirec^2]);
         end
     
         RatioImageStack(:,:,:, (direcIndx1-1)*Ndirec+direcIndx2 ) = ratioimg;
@@ -151,10 +206,7 @@ for direcIndx1 = 1:Ndirec
     end
 end
 
-
-%% Delete directory of images
-rmdir([char(opts.ImageOutputFolder)], 's')
-
+clear IMG1 IMG2 
 
 
 %% PARAMETER ESTIMATION
@@ -177,7 +229,7 @@ pw = ceil((opts.patchsize-1)/2);
 
 
 %% Define histogram
-
+disp('Calibrating...')
 for zindx = zs
     for yindx = ys
         for xindx = xs
@@ -194,8 +246,11 @@ for zindx = zs
             outlierbools = or(patchvals>up, patchvals<down);
             patchvals(outlierbools) = [];
 
+
+
             % == INITIAL GUESSES
 
+            % T2
             T2guess = -(TE2-TE1)/log(mean(patchvals));
 
             % Deal with unrealistic values
@@ -203,11 +258,13 @@ for zindx = zs
             T2guess(T2guess>250) = 250;
 
 
+            % sigma0
             rTE = (2*(TE1^2))/(TE1+TE2);
-            
             sigma0guess = std(patchvals)/(sqrt(2)*exp(rTE/T2guess));
             sigma0guess(sigma0guess > 0.25) = 0.25;            
             sigma0guess(sigma0guess < 0.001) = 0.001;
+
+
            
             % % == USING RATIO DISTRIBUTION (SLOW)
 
@@ -245,7 +302,6 @@ for zindx = zs
             resnorm = 1;
 
 
-
             
             % Append to arrays
             T2(zindx, yindx, xindx) = T2fit;
@@ -278,7 +334,7 @@ end
 
 %% Smoothing
 
-smoothsigma = 0.5;
+smoothsigma = opts.smoothsigma;
 % % Filter slices
 for slice = zs
     T2(slice,:,:) = imgaussfilt(squeeze( T2(slice,:,:)), smoothsigma);
@@ -287,14 +343,16 @@ end
 
 %% Save maps
 
-% Save Output images as mat files
-MapOutputFolder = char(opts.OutputFolder); %[char(opts.OutputFolder) '/' opts.DATE '/Maps'];
+if opts.save
 
-save([MapOutputFolder '/T2.mat'], "T2")
-save([MapOutputFolder '/sigma0.mat'], "sigma0")
-% save([MapOutputFolder '/DTI1.mat'], "img1")
-% save([MapOutputFolder '/DTI2.mat'], "img2")
+    % Save Output images as mat files
+    MapOutputFolder = char(opts.OutputFolder); 
+    save([MapOutputFolder '/T2.mat'], "T2")
+    save([MapOutputFolder '/sigma0.mat'], "sigma0")
+    % save([MapOutputFolder '/DTI1.mat'], "img1")
+    % save([MapOutputFolder '/DTI2.mat'], "img2")
 
+end
 % % % Filter slices
 % slice = 5;
 % % T2slice = squeeze(T2(slice,:,:));
@@ -302,7 +360,7 @@ save([MapOutputFolder '/sigma0.mat'], "sigma0")
 % T2slice = imgaussfilt(squeeze( T2(slice,:,:)), 1);
 % sigma0slice = imgaussfilt(squeeze( sigma0(slice,:,:)), 1);
 % 
-% figure;
+% % figure;
 % imshow(squeeze(img1(slice,:,:)), [])
 % colorbar
 % figure;

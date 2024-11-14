@@ -5,20 +5,20 @@
 %% Define grid 
 
 % Number of voxels per grid section
-ngrid = 10;
+ngrid = 30;
 
 % fIC values
 fICmin = 0.05;
-fICmax = 0.8;
-NfIC = 16;
+fICmax = 0.95;
+NfIC = 19;
 fICs = linspace(fICmin, fICmax, NfIC);
 
 % T2 values
-T2s = [40, 50, 60, 80];
+T2s = [50, 60, 80];
 NT2 = length(T2s);
 
 % sigma0
-sigma0s = [0.04, 0.04, 0.04, 0.04]; 
+sigma0s = 0.02*ones(size(T2s)); 
 Nsigma0 = length(sigma0s);
 
 % fIC grid
@@ -49,20 +49,19 @@ for sigma0indx = 1:Nsigma0
 end
 
 % Rs
-muR = 7.5;
-sigmaR = 1.5;
+muRs = [7 8];
+sigmaRs = [1 1];
 
 Rs = linspace(0.1, 15.1, 17);
-fRs = normpdf(Rs, muR, sigmaR);
-fRs = (1/sum(fRs))*fRs;
+
 
 
 %% SIMULATE SIGNALS OVER GRID
 
-schemesfolder = char("C:\Users\adam\OneDrive - University College London\UCL PhD\Code\VERDICT-Processing\Schemes");
+schemesfolder = char("C:\Users\adam\OneDrive - University College London\UCL PhD\PhD\Code\VERDICT-Processing\Schemes");
 
-modeltype = 'No VASC VERDICT';
-schemename = 'Short Scheme v3';
+modeltype = 'Original VERDICT';
+schemename = 'Original';
 
 load([schemesfolder '/' schemename '.mat'])
 nscheme = length(scheme);
@@ -75,11 +74,30 @@ normsignalgrid = zeros(NT2*ngrid, NfIC*ngrid, nscheme);
 % Simulate signals over grid
 for jndx = 1:size(T2grid,1)
     for indx = 1:size(fICgrid, 2)
+
+        disp([num2str(jndx) ', ' num2str(indx) ])
         
         sigma0 = sigma0grid(jndx, indx);
         T2 = T2grid(jndx, indx);
+
+        % Rs
+        muR = muRs(1) + (muRs(2)-muRs(1))*rand();
+        sigmaR = sigmaRs(1) + (sigmaRs(2)-sigmaRs(1))*rand();
+        fRs = normpdf(Rs, muR, sigmaR);
+        fRs = (1/sum(fRs))*fRs;
+
+        % fIC
         fIC = fICgrid(jndx, indx);
-        fEES = 1-fIC;
+        
+        % fVASC
+        switch modeltype
+            case 'Original VERDICT'
+                fVASC = min(0.1, 1-fIC)*rand()
+            case 'No VASC VERDICT'
+                fVASC = 0;
+        end
+        % fEES
+        fEES = 1-fIC-fVASC;
 
 
         for schemeIndx = 1:length(scheme)
@@ -96,7 +114,12 @@ for jndx = 1:size(T2grid,1)
             Rav = scheme(schemeIndx).Rav;
 
             % Tissue parameter vector
-            tps = [fIC*fRs, fEES];
+            switch modeltype
+                case 'Original VERDICT'
+                    tps = [fIC*fRs, fEES ,fVASC];
+                case 'No VASC VERDICT'
+                    tps = [fIC*fRs, fEES];
+            end
             
             % Diffusion weighting fraction
             fd = simulateSignal( ...
@@ -171,7 +194,7 @@ end
 
 %% MP-PCA DENOISING
 
-usedenoise = true;
+usedenoise = false;
 
 
 
@@ -207,15 +230,15 @@ end
 %% APPLY FITTING
 
 % == Settings
-fittingtype = 'adaptive';
+fittingtype = 'adaptive';  % 'normal' using Rice network; 'adaptive' using Ratio networks
 
 % for normal fitting
 fittingtechnique = 'MLP';
 noisetype = 'Rice';
 T2train = 10000;
-sigma0train = sigma0s(1);
+sigma0train = 0.04;
 
-modelfolder = char("C:\Users\adam\OneDrive - University College London\UCL PhD\PhD Year 1\Projects\Noise Statistics Project\Code\DWI-Noise-Project\Adaptive Model Fitting\MLP\models");
+modelfolder = char("C:\Users\adam\OneDrive - University College London\UCL PhD\PhD\Projects\DWI Noise Project\Code\DWI-Noise-Project\Adaptive Model Fitting\MLP\Simulation Experiment\models");
 
 switch fittingtype
 
@@ -247,7 +270,7 @@ switch fittingtype
             schemesfolder = schemesfolder,...
             noisetype = 'Ratio',...
             T2 = T2grid,...
-            sigma0 = 0.5*sigma0grid,...
+            sigma0 = sigma0grid,...
             T2vals = T2vals,...
             sigma0vals = sigma0vals...
             );
@@ -286,57 +309,59 @@ end
 
 
 %% Display fitting results
-
-f=figure;
-imshow(fICgrid, [0, 1] );
-c = colorbar;
-ylabel(c, 'f_{IC}')
-h = gca;
-h.Visible = 'On';
-yticks([round(ngrid/2) + ngrid*(0:NT2-1) ])
-yticklabels(T2s)
-ylabel('T2 (ms)')
-xticks([round(ngrid/2) + ngrid*(0:NfIC-1) ])
-xticklabels([])
-% xlabel('f_{IC} (ms)')
-title('Ground Truth')
-ax = gca();
-ax.FontSize=12;
-
-
-figure;
-imshow(fIC, [0, 1]);
-c = colorbar;
-ylabel(c, 'f_{IC}')
-h = gca;
-h.Visible = 'On';
-yticks([round(ngrid/2) + ngrid*(0:NT2-1) ])
-yticklabels(T2s)
-ylabel('T2 (ms)')
-xticks([round(ngrid/2) + ngrid*(0:NfIC-1) ])
-xticklabels([])
-% xlabel('f_{IC} (ms)')
-switch fittingtype
-    case 'normal'
-        switch fittingtechnique           
-            case 'AMICO'            
-                title('AMICO')
-            case 'MLP'
-                title('MLP (Rice)')
-        end
-    case 'adaptive'
-        title('adaptive')
-end
-        
-
-ax = gca();
-ax.FontSize=12;
+% 
+% f=figure;
+% imshow(fICgrid, [0, 1] );
+% c = colorbar;
+% ylabel(c, 'f_{IC}')
+% h = gca;
+% h.Visible = 'On';
+% yticks([round(ngrid/2) + ngrid*(0:NT2-1) ])
+% yticklabels(T2s)
+% ylabel('T2 (ms)')
+% xticks([round(ngrid/2) + ngrid*(0:NfIC-1) ])
+% xticklabels([])
+% % xlabel('f_{IC} (ms)')
+% title('Ground Truth')
+% ax = gca();
+% ax.FontSize=12;
+% 
+% 
+% figure;
+% imshow(fIC, [0, 1]);
+% c = colorbar;
+% ylabel(c, 'f_{IC}')
+% h = gca;
+% h.Visible = 'On';
+% yticks([round(ngrid/2) + ngrid*(0:NT2-1) ])
+% yticklabels(T2s)
+% ylabel('T2 (ms)')
+% xticks([round(ngrid/2) + ngrid*(0:NfIC-1) ])
+% xticklabels([])
+% % xlabel('f_{IC} (ms)')
+% switch fittingtype
+%     case 'normal'
+%         switch fittingtechnique           
+%             case 'AMICO'            
+%                 title('AMICO')
+%             case 'MLP'
+%                 title('MLP (Rice)')
+%         end
+%     case 'adaptive'
+%         title('adaptive')
+% end
+% 
+% 
+% ax = gca();
+% ax.FontSize=12;
 
 
 % saveas(f, [outputfolder '/fIC grids.fig'])
 % saveas(f, [outputfolder '/fIC grids.png'])
 
-%% Bias and variance results
+%% Bias and std results
+
+outputfolder = char("C:\Users\adam\OneDrive - University College London\UCL PhD\PhD\Projects\DWI Noise Project\Code\DWI-Noise-Project\Adaptive Model Fitting\Outputs\Simulation");
 
 % Difference maps
 Diffs = fIC-fICgrid;
@@ -362,41 +387,89 @@ end
 
 % BIAS FIGURE
 
-f=figure;
+f1=figure;
 for T2indx = 1:NT2
     T2 = T2s(T2indx);
     plot(fICs, Biases(T2indx,:), '-*', DisplayName = ['T2 = ' num2str(T2) ' ms'])
     hold on
 end
-ylim([-0.1 0.4])
+ylim([-0.05 0.5])
 xlim([min(fICs)-0.05, max(fICs)+0.05])
 xlabel('f_{IC}')
 ylabel('Bias')
+switch fittingtype
+    case 'normal'
+        title(['Rice (\sigma_0 = ' num2str(sigma0s(1)) ')' ])
+    case 'adaptive'
+        title(['Ratio (\sigma_0 = ' num2str(sigma0s(1)) ')' ])
+end
 grid on
 ax = gca();
 ax.FontSize=12;
-% legend;
-f.Position = [680 350 400 300];
-% saveas(f, [outputfolder '/RiceBias.fig'])
-% saveas(f, [outputfolder '/RiceBias.png'])
+legend;
+f1.Position = [400, 200, 350, 400];
+
 
 
 % VARIANCE FIGURE
 
-f=figure;
+f2=figure;
 for T2indx = 1:NT2
     T2 = T2s(T2indx);
-    plot(fICs, Variances(T2indx,:), '-*', DisplayName = ['T2 = ' num2str(T2) ' ms'])
+    plot(fICs, sqrt(Variances(T2indx,:)), '-*', DisplayName = ['T2 = ' num2str(T2) ' ms'])
     hold on
 end
-ylim([-0.005 0.01])
+ylim([-0.015 0.15])
 xlim([min(fICs)-0.05, max(fICs)+0.05])
 xlabel('f_{IC}')
-ylabel('Variance')
+ylabel('Standard deviation')
+switch fittingtype
+    case 'normal'
+        title(['Rice (\sigma_0 = ' num2str(sigma0s(1)) ')' ])
+    case 'adaptive'
+        title(['Ratio (\sigma_0 = ' num2str(sigma0s(1)) ')' ])
+end
 grid on
 ax = gca();
 ax.FontSize=12;
 % legend;
-f.Position = [680 350 400 300];
-% saveas(f, [outputfolder '/RiceVariance.fig'])
-% saveas(f, [outputfolder '/RiceVariance.png'])
+f2.Position = [400, 200, 350, 400];
+
+
+%% Save figures
+
+switch fittingtype
+    case 'normal'
+        mkdir([outputfolder '/' schemename '/Rice/sigma0_' num2str(sigma0s(1))])
+        saveas(f1, [outputfolder '/' schemename '/Rice/sigma0_' num2str(sigma0s(1)) '/Bias.fig'])
+    case 'adaptive'
+        mkdir([outputfolder '/' schemename '/Ratio/sigma0_' num2str(sigma0s(1))])
+        saveas(f1, [outputfolder '/' schemename '/Ratio/sigma0_' num2str(sigma0s(1)) '/Bias.fig'])
+end
+
+switch fittingtype
+    case 'normal'
+        saveas(f2, [outputfolder '/' schemename '/Rice/sigma0_' num2str(sigma0s(1)) '/Variance.fig'])
+    case 'adaptive'
+        saveas(f2, [outputfolder '/' schemename '/Ratio/sigma0_' num2str(sigma0s(1)) '/Variance.fig'])
+end
+
+
+% 
+% %% Fitting residual error
+% 
+% % Resimulate signals using model parameter estimate and look at mean
+% % squared error between 
+% 
+% resimsignalgrid = zeros(size(signalgrid));
+% 
+% for indx = 1:size(signalgrid,1)
+%     for jindx = 1:size(signalgrid, 2)
+% 
+% 
+%         % simulate signal with fitted values 
+% 
+% 
+%     end
+% end
+% 

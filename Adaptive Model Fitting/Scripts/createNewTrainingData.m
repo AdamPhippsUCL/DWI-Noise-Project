@@ -1,29 +1,29 @@
 % Script to create new training data for MLP model training
 
 % Base folder
-basef = char("C:\Users\adam\OneDrive - University College London\UCL PhD\Code\VERDICT-Processing");
+basef = char("C:\Users\adam\OneDrive - University College London\UCL PhD\PhD\Code\VERDICT-Processing");
 
 % Number of training data samples
-Nvoxel = 5000;
+Nvoxel = 20000;
 
 % Noise 
 noisetype = 'Rice';
-sigma0s = [0.01 0.02 0.04];
-T2s = [10000];%[40 50 60 80];
+sigma0s = [ 0.02, 0.04, 0.06];
+T2s = [ 10000];
 
 % Training data folder
 savedata = true;
-TrainingDataFolder = char("C:\Users\adam\OneDrive - University College London\UCL PhD\PhD Year 1\Projects\Noise Statistics Project\Code\DWI-Noise-Project\Adaptive Model Fitting\MLP\training data");
+TrainingDataFolder = char("C:\Users\adam\OneDrive - University College London\UCL PhD\PhD\Projects\DWI Noise Project\Code\DWI-Noise-Project\Adaptive Model Fitting\MLP\training data");
 
-% Save T2 and sigma0 values
+% % Save T2 and sigma0 values
 % save([TrainingDataFolder '/sigma0s.mat'], "sigma0s")
 % save([TrainingDataFolder '/T2s.mat'], "T2s")
 
 %% Protocols
 
 % If multiple, define as a cell array of char arrays
-modeltypes = {'No VASC VERDICT'};
-schemenames = {'Short Scheme v3'};
+modeltypes = {'Original VERDICT'};
+schemenames = {'Original'};
 
 % Saving sheme as mat file
 schemesfolder = [basef '/Schemes'];
@@ -33,10 +33,10 @@ savescheme = true;
 %% Cell sizes
 
 % Cell Radius distribution R~Normal( muR, sigmaR)
-muRmin = 7;
-muRmax = 8;
-sigmaRmin = 1.5;
-sigmaRmax = 2.5;
+muRmin = 6;
+muRmax = 9;
+sigmaRmin = 0.99;
+sigmaRmax = 1.01;
 
 
 %% Create training data
@@ -61,7 +61,6 @@ for sigma0 = sigma0s
                 T2 = T2,...
                 randmuRs=[muRmin, muRmax],...
                 randsigmaRs=[sigmaRmin, sigmaRmax],...
-                savescheme = savescheme,...
                 schemesfolder=schemesfolder,...
                 savedata=savedata,...
                 outputfolder=outputfolder...

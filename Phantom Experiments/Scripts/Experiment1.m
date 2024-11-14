@@ -2,12 +2,18 @@
 
 %% Initial Settings
 
+% Figure visibility
+figvis = 'on';
 
 % Define necessary folders
-ImageDatafolder = char("C:\Users\adam\OneDrive - University College London\UCL PhD\PhD Year 1\Projects\Noise Statistics Project\Code\DWI-Noise-Project\Phantom Experiments\Imaging Data");
+ImageDatafolder = char("C:\Users\adam\OneDrive - University College London\UCL PhD\PhD\Projects\DWI Noise Project\Code\DWI-Noise-Project\Phantom Experiments\Imaging Data");
 imgtype = 'MAT DN';
+rescale = true;
 imagefolder = [ImageDatafolder '/' imgtype];
 ROIfolder = [ImageDatafolder '/ROIs'];
+
+% Define noise model type
+noisetype = 'Ratio';
 
 % Load image and ROI details
 load([ImageDatafolder '/ImageDetails.mat'])
@@ -15,11 +21,11 @@ load([ImageDatafolder '/ROIDetails.mat'])
 
 % Define image names to use
 ImageNames = {
-    'b1500_Ex1',...
-    'b2000_Ex1',...
-    'b2100_Ex1',...
-    'b2400_Ex1',...
-    'b2500_Ex1',...
+    % 'b1500_Ex1',...
+    % 'b2000_Ex1',...
+    % 'b2100_Ex1',...
+    % 'b2400_Ex1',...
+    % 'b2500_Ex1',...
     'b2750_Ex1',...
     'b3000_Ex1',...
     'b3500_Ex1',...
@@ -30,14 +36,14 @@ Nimg = length(ImageNames);
 
 % Define ROI names to use
 ROINames = {
-    ..."ROI1",...
+    % "ROI1",...
     "ROI2",...
     "ROI3",...
     "ROI4",...
     "ROI5",...
     "ROI6",...
     "ROI7",...
-    ..."ROI8"
+    "ROI8"
     };
 
 NROI = length(ROINames);
@@ -48,9 +54,6 @@ FittingResults = struct();
 
 %% Run Experiment
 
-% Define noise model type
-noisetype = 'Ratio';
-
 for ROIindx = 1:NROI
 
     % Get ROI details
@@ -60,8 +63,9 @@ for ROIindx = 1:NROI
     D = ROIDetails.D{whereROI};
 
 
-
     for imgindx = 1:Nimg
+
+        disp(['ROI: ' num2str(ROIindx) ', Image: ' num2str(imgindx)])
 
         % Get image details
         ImageName = ImageNames{imgindx};
@@ -86,6 +90,9 @@ for ROIindx = 1:NROI
         img = double(load([imagefolder '/' char(ImageName) '/ImageArray.mat']).ImageArray);
 
 
+
+
+
         % Normalised image
         normimg = img(:,:,:,2)./img(:,:,:,1);
 
@@ -103,6 +110,19 @@ for ROIindx = 1:NROI
         % Extract ROI values
         ROIvalues = normimg(ROI);
 
+        % Rescale if using DN images
+
+
+        if ~strcmp(imgtype, 'MAT')
+            if rescale
+                Rescale = double(load([imagefolder '/' char(ImageName) '/Rescale.mat']).Rescale);
+                ROIrescale = Rescale(ROI);
+                shift = mean(ROIvalues)*(1-mean(ROIrescale));
+                ROIvalues = ROIvalues - shift;
+            end
+
+        end
+
 
         % Define bin edges and centers
         binmin = 0;
@@ -115,14 +135,14 @@ for ROIindx = 1:NROI
 
         % Temporary histogram to get optimal bin spacing
         ftemp=figure;
-        h = histogram(ROIvalues, 100);
+        h = histogram(ROIvalues, 50);
         binedges = h.BinEdges;
         binspacing = binedges(2)-binedges(1);
 
-        % Max 100, min 200
+        % Max 1000, min 100
         nbin =  min( [round((binmax-binmin)/binspacing), 1000] );
-        if nbin<200
-            nbin=200;
+        if nbin<100
+            nbin=100;
         end
         close(ftemp)
 
@@ -132,24 +152,32 @@ for ROIindx = 1:NROI
         bincentres = (binedges(:,1:end-1) + binedges(:,2:end)) / 2 ;
         binspacing = bincentres(2)-bincentres(1);
 
-        f=figure;
-        h = histogram(ROIvalues, binedges);
+        f=figure('visible',figvis);
+        f.Position = [400, 200, 600, 400];
+        h = histogram(ROIvalues, binedges, HandleVisibility='off');
         % binedges = h.BinEdges;
         % binspacing = binedges(2)-binedges(1);
         % bincentres = (1/2)*(binedges(1:end-1)+binedges(2:end));
         counts = h.Values;
-        xlim([0 2])
+        xlim([0 binmax])
         ylim([0 1.05*max(counts)]);
 
 
         % == Fitting
 
         % First guess
-        beta0guess = [0.02, T2, exp(-D*b)];
+        sigma0guess = sqrt(2)*std(ROIvalues)/exp(TE/T2);
+        fdguess = median(ROIvalues);
+
+        beta0guess = [sigma0guess, T2, fdguess];
 
         % Bounds
-        lb = [0.001, T2-50, exp(-(D+0.5e-4)*b)];
-        ub = [0.4, T2+50, exp(-(D-0.5e-4)*b)];
+        Derr = 2e-4;
+        T2err = 10;
+        sigma0min = 0.001;
+        sigma0max = 0.4;
+        lb = [sigma0min, T2-T2err, exp(-(D+Derr)*b)];
+        ub = [sigma0max, T2+T2err, exp(-(D-Derr)*b)];
 
         % Apply fitting
         [coeffs, resnorm] = fitDistToHist( ...
@@ -178,9 +206,9 @@ for ROIindx = 1:NROI
 
         switch noisetype
             case 'Ratio'
-                [dist, signals] = RatioDistRician(b0signal, bsignal, sigma0fit, N0 = NSA, Nb = NSA*Rav, zs = linspace(0,2,200));
+                [dist, signals] = RatioDistRician(b0signal, bsignal, sigma0fit, N0 = NSA, Nb = NSA*Rav, zs = bincentres);
             case 'Rice'
-                [dist, signals] = RiceDist(b0signal, bsignal, sigma0fit, zs = linspace(0,2,200));
+                [dist, signals] = RiceDist(b0signal, bsignal, sigma0fit, zs = bincentres);
         end
         
         hold on
@@ -331,7 +359,7 @@ boxplot(transpose(Ds))
 xticks(linspace(1,NROI,NROI))
 xticklabels(concentrations(ROINames))
 xlabel('PVP concentration')
-ylabel('Estimated D')
+ylabel('Estimated D (mm^2/s)')
 % xlabel('Concentration')
 ylim([0,1.2e-3])
 grid on
@@ -342,10 +370,51 @@ ax.FontSize = 12;
 % saveas(fig3, [char(figfolder) '/D (' noisetype ').fig'])
 
 
+% == Figure 4: Resnorm
+
+
+fig4 = figure;
+
+resnorms = zeros(NROI, Nimg);
+
+for ROIindx = 1:NROI
+
+    % Get ROI details
+    ROIName = ROINames{ROIindx};
+    whereROI = [ROIDetails.ROIName{:}] == ROIName;
+    T2 = ROIDetails.T2{whereROI};
+    D = ROIDetails.D{whereROI};
+
+
+    % ROI bools
+    ROIbools = ([FittingResults.ROIName] == ROIName);
+
+    % Extract sigma0 measurements
+    resnorms(ROIindx, :) = [FittingResults(ROIbools).resnorm];
+    scatter(ROIindx*ones(Nimg, 1), resnorms(ROIindx, :), '*', MarkerEdgeColor = colordict(ROIindx), DisplayName = concentrations(ROIName)) 
+    hold on
+
+end
+
+boxplot(transpose(resnorms))
+xticks(linspace(1,NROI,NROI))
+xticklabels(concentrations(ROINames))
+xlabel('PVP concentration')
+ylabel('Fitting Residual Error')
+% xlabel('Concentration')
+% ylim([0, 0.25]);%opts.sigma0max])
+grid on
+title(noisetype)
+legend;
+ax = gca();
+ax.FontSize = 12;
+% saveas(fig1, [char(figfolder) '/sigma0 (' noisetype ').fig'])
+
+
 
 %% Save figures and fitting results
 
-outputfolder = char("C:\Users\adam\OneDrive - University College London\UCL PhD\PhD Year 1\Projects\Noise Statistics Project\Code\DWI-Noise-Project\Phantom Experiments\Outputs");
+outputfolder = char("C:\Users\adam\OneDrive - University College London\UCL PhD\PhD\Projects\DWI Noise Project\Code\DWI-Noise-Project\Phantom Experiments\Outputs");
 dt = char(datetime());
 dt = strrep(dt, ':', '-');
 outf = [outputfolder '/' dt];
@@ -359,13 +428,21 @@ Meta.imagefolder = imgtype;
 Meta.ImageNames = ImageNames;
 Meta.ROINames = ROINames;
 Meta.NoiseType = noisetype;
+if ~strcmp(imgtype, 'MAT')
+    Meta.rescale = rescale;
+end
+
+Meta.Derr = Derr;
+Meta.T2err = T2err;
+Meta.sigma0range = [sigma0min, sigma0max];
+
 
 save([outf '/Meta.mat'], "Meta");
 save([outf '/FittingResults.mat'], "FittingResults");
 
 % Save figures
-saveas(fig1, [char(figfolder) '/sigma0 (' noisetype ').fig'])
-saveas(fig2, [char(figfolder) '/T2 (' noisetype ').fig'])
-saveas(fig3, [char(figfolder) '/D (' noisetype ').fig'])
-
+saveas(fig1, [char(figfolder) '/sigma0.fig'])
+saveas(fig2, [char(figfolder) '/T2.fig'])
+saveas(fig3, [char(figfolder) '/D.fig'])
+saveas(fig4, [char(figfolder) '/Resnorm.fig'])
 clear;

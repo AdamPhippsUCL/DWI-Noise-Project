@@ -3,15 +3,15 @@
 
 
 % Save folder
-folder = "C:\Users\adam\OneDrive - University College London\UCL PhD\PhD Year 1\Projects\General VERDICT Code\General-VERDICT-Code\Signal Simulation\Calibration Curves";
+folder = "C:\Users\adam\OneDrive - University College London\UCL PhD\PhD\Projects\DWI Noise Project\Code\DWI-Noise-Project\Functions\Calibration Curves";
 
 % Number of samples
 Nsample = 100000;
 
-NSAs = [48, 60];
+NSAs = [18, 36, 54];%[3, 48, 60];
 
 % Define SNR
-SNRs = linspace(0.2,5,49);
+SNRs = linspace(0.1,5,50);
 
 save([char(folder) '/SNRs.mat'], 'SNRs')
 
